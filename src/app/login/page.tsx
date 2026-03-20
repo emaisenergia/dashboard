@@ -8,8 +8,8 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 function LoginForm() {
     const router = useRouter();
     const { login, user, loading } = useAuth();
-    const [email, setEmail] = useState('marcos@opsdash.com');
-    const [password, setPassword] = useState('admin123');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
     const [remember, setRemember] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -142,11 +142,7 @@ function LoginForm() {
                     </div>
                 </div>
 
-                {/* Demo hint */}
-                <div className="mt-4 text-center text-xs px-4 py-2.5 rounded-lg"
-                    style={{ background: 'hsl(262 83% 10%)', border: '1px solid hsl(262 83% 18%)', color: 'hsl(262 83% 65%)' }}>
-                    Demo: <strong>marcos@opsdash.com</strong> · senha: <strong>admin123</strong>
-                </div>
+
             </div>
         </div>
     );

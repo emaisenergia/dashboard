@@ -50,16 +50,12 @@ const defaultIntegrations = {
     googleAdsId: '',
 };
 
-// Seeded demo user
-const DEMO_USER: User = {
-    id: 'u001',
-    name: 'Marcos Oliveira',
-    email: 'marcos@opsdash.com',
-    phone: '+55 11 99999-0000',
-    role: 'Gestor de Tráfego',
-    company: 'OpsDash Ltda.',
-    cnpj: '12.345.678/0001-90',
-    website: 'https://opsdash.com',
+// Base user template used when registering new accounts
+const BASE_USER: Omit<User, 'id' | 'name' | 'email' | 'company'> = {
+    phone: '',
+    role: 'Administrador',
+    cnpj: '',
+    website: '',
     timezone: 'America/Sao_Paulo',
     currency: 'BRL',
     language: 'pt-BR',
@@ -71,8 +67,6 @@ const DEMO_USER: User = {
 };
 
 const STORAGE_KEY = 'opsdash_user';
-
-// Fake credentials store (in real app this would be server-side)
 const CREDENTIALS_KEY = 'opsdash_credentials';
 
 function getCredentials(): Record<string, string> {
@@ -88,7 +82,6 @@ function saveCredential(email: string, passwordHash: string) {
     localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(creds));
 }
 
-// Simple hash for demo purposes
 function hashPassword(pw: string): string {
     return btoa(pw + '_opsdash_salt');
 }
@@ -118,12 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         } catch { /* ignore */ }
         setLoading(false);
-
-        // Seed demo credentials if none exist
-        const creds = getCredentials();
-        if (!creds[DEMO_USER.email]) {
-            saveCredential(DEMO_USER.email, hashPassword('admin123'));
-        }
     }, []);
 
     const persistUser = useCallback((u: User) => {
@@ -146,8 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         } catch { /* ignore */ }
 
-        // Use demo user as base, update email
-        const u: User = { ...DEMO_USER, email, id: `u_${Date.now()}` };
+        const u: User = { ...BASE_USER, id: `u_${Date.now()}`, name: email.split('@')[0], email, company: '' };
         persistUser(u);
         return { ok: true };
     }, [persistUser]);
@@ -156,19 +142,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const creds = getCredentials();
         if (creds[email]) return { ok: false, error: 'E-mail já cadastrado.' };
         saveCredential(email, hashPassword(password));
-        const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
         const u: User = {
-            ...DEMO_USER,
+            ...BASE_USER,
             id: `u_${Date.now()}`,
             name,
             email,
             company,
-            phone: '',
-            role: 'Administrador',
-            cnpj: '',
-            website: '',
-            integrations: defaultIntegrations,
-            notifications: defaultNotifications,
         };
         persistUser(u);
         return { ok: true };
