@@ -93,6 +93,36 @@ export interface Campaign {
     startDate: string;
 }
 
+export type SaleStatus = 'RECEBIDO' | 'PENDENTE' | 'CANCELADO';
+
+export interface AtendenteSale {
+    id: string;
+    atendenteId: string;
+    produto: string;
+    quantidade: number;
+    precoUnitario: number;
+    custoUnitario: number;
+    total: number;
+    totalCusto: number;
+    lucro: number;
+    data: string;
+    status: SaleStatus;
+    notas: string;
+}
+
+export interface Atendente {
+    id: string;
+    nome: string;
+    cor: string;
+}
+
+export const SEED_ATENDENTES: Atendente[] = [
+    { id: 'A1', nome: 'Ana Silva',      cor: 'hsl(262 83% 66%)' },
+    { id: 'A2', nome: 'Bruno Costa',    cor: 'hsl(142 71% 45%)' },
+    { id: 'A3', nome: 'Carla Mendes',   cor: 'hsl(43 96% 56%)'  },
+    { id: 'A4', nome: 'Diego Santos',   cor: 'hsl(200 83% 55%)' },
+];
+
 // ─── Initial seed data ───────────────────────────────────────────────────────
 
 const seedExpenses: Expense[] = [
@@ -147,6 +177,27 @@ const seedWithdrawals: Withdrawal[] = [
     { id: 'S006', desc: 'Saque — Distribuição sócios', destino: 'Múltiplas contas', valor: 30000, data: '28/03/2026', status: 'AGENDADO' },
 ];
 
+const seedAtendenteSales: AtendenteSale[] = [
+    { id: 'AT001', atendenteId: 'A1', produto: 'Whey Protein 900g — Banana',      quantidade: 12, precoUnitario: 189.90, custoUnitario: 90.00, total: 2278.80, totalCusto: 1080.00, lucro: 1198.80, data: '2026-03-03', status: 'RECEBIDO', notas: '' },
+    { id: 'AT002', atendenteId: 'A2', produto: 'Creatina Monoidratada 300g',       quantidade: 8,  precoUnitario: 149.90, custoUnitario: 60.00, total: 1199.20, totalCusto: 480.00,  lucro: 719.20,  data: '2026-03-03', status: 'RECEBIDO', notas: '' },
+    { id: 'AT003', atendenteId: 'A3', produto: 'Kit Suplemento Starter',           quantidade: 5,  precoUnitario: 297.00, custoUnitario: 130.00,total: 1485.00, totalCusto: 650.00,  lucro: 835.00,  data: '2026-03-04', status: 'RECEBIDO', notas: '' },
+    { id: 'AT004', atendenteId: 'A4', produto: 'Pré-Treino Energy Burst 300g',     quantidade: 10, precoUnitario: 169.90, custoUnitario: 70.00, total: 1699.00, totalCusto: 700.00,  lucro: 999.00,  data: '2026-03-04', status: 'RECEBIDO', notas: '' },
+    { id: 'AT005', atendenteId: 'A1', produto: 'BCAA 2:1:1 300g',                  quantidade: 7,  precoUnitario: 119.90, custoUnitario: 50.00, total: 839.30,  totalCusto: 350.00,  lucro: 489.30,  data: '2026-03-07', status: 'RECEBIDO', notas: '' },
+    { id: 'AT006', atendenteId: 'A2', produto: 'Colágeno + Vitamina C 60 Caps',    quantidade: 15, precoUnitario: 54.90,  custoUnitario: 20.00, total: 823.50,  totalCusto: 300.00,  lucro: 523.50,  data: '2026-03-08', status: 'RECEBIDO', notas: '' },
+    { id: 'AT007', atendenteId: 'A3', produto: 'Whey Protein 900g — Chocolate',    quantidade: 9,  precoUnitario: 189.90, custoUnitario: 90.00, total: 1709.10, totalCusto: 810.00,  lucro: 899.10,  data: '2026-03-10', status: 'RECEBIDO', notas: '' },
+    { id: 'AT008', atendenteId: 'A4', produto: 'Vitamina D3 2000UI 60 Caps',       quantidade: 20, precoUnitario: 34.90,  custoUnitario: 12.00, total: 698.00,  totalCusto: 240.00,  lucro: 458.00,  data: '2026-03-10', status: 'RECEBIDO', notas: '' },
+    { id: 'AT009', atendenteId: 'A1', produto: 'Kit Suplemento Starter',           quantidade: 4,  precoUnitario: 297.00, custoUnitario: 130.00,total: 1188.00, totalCusto: 520.00,  lucro: 668.00,  data: '2026-03-12', status: 'RECEBIDO', notas: 'Cliente retorno' },
+    { id: 'AT010', atendenteId: 'A2', produto: 'Ômega 3 1000mg 120 Cáps',          quantidade: 11, precoUnitario: 79.90,  custoUnitario: 30.00, total: 878.90,  totalCusto: 330.00,  lucro: 548.90,  data: '2026-03-13', status: 'RECEBIDO', notas: '' },
+    { id: 'AT011', atendenteId: 'A3', produto: 'Creatina Monoidratada 300g',       quantidade: 6,  precoUnitario: 149.90, custoUnitario: 60.00, total: 899.40,  totalCusto: 360.00,  lucro: 539.40,  data: '2026-03-14', status: 'RECEBIDO', notas: '' },
+    { id: 'AT012', atendenteId: 'A4', produto: 'BCAA 2:1:1 300g',                  quantidade: 8,  precoUnitario: 119.90, custoUnitario: 50.00, total: 959.20,  totalCusto: 400.00,  lucro: 559.20,  data: '2026-03-15', status: 'RECEBIDO', notas: '' },
+    { id: 'AT013', atendenteId: 'A1', produto: 'Pré-Treino Energy Burst 300g',     quantidade: 6,  precoUnitario: 169.90, custoUnitario: 70.00, total: 1019.40, totalCusto: 420.00,  lucro: 599.40,  data: '2026-03-17', status: 'RECEBIDO', notas: '' },
+    { id: 'AT014', atendenteId: 'A2', produto: 'Whey Protein 900g — Banana',      quantidade: 14, precoUnitario: 189.90, custoUnitario: 90.00, total: 2658.60, totalCusto: 1260.00, lucro: 1398.60, data: '2026-03-18', status: 'RECEBIDO', notas: 'Venda em grupo' },
+    { id: 'AT015', atendenteId: 'A3', produto: 'Colágeno + Vitamina C 60 Caps',    quantidade: 18, precoUnitario: 54.90,  custoUnitario: 20.00, total: 988.20,  totalCusto: 360.00,  lucro: 628.20,  data: '2026-03-19', status: 'RECEBIDO', notas: '' },
+    { id: 'AT016', atendenteId: 'A4', produto: 'Kit Suplemento Starter',           quantidade: 3,  precoUnitario: 297.00, custoUnitario: 130.00,total: 891.00,  totalCusto: 390.00,  lucro: 501.00,  data: '2026-03-19', status: 'PENDENTE', notas: '' },
+    { id: 'AT017', atendenteId: 'A1', produto: 'Vitamina D3 2000UI 60 Caps',       quantidade: 16, precoUnitario: 34.90,  custoUnitario: 12.00, total: 558.40,  totalCusto: 192.00,  lucro: 366.40,  data: '2026-03-20', status: 'RECEBIDO', notas: '' },
+    { id: 'AT018', atendenteId: 'A2', produto: 'Pré-Treino Energy Burst 300g',     quantidade: 9,  precoUnitario: 169.90, custoUnitario: 70.00, total: 1529.10, totalCusto: 630.00,  lucro: 899.10,  data: '2026-03-20', status: 'PENDENTE', notas: 'Aguardando confirmação' },
+];
+
 const seedCampaigns: Campaign[] = [
     { id: 'C001', platform: 'TikTok', name: 'UCG Whey Banana - TOF', budget: 15000, spend: 12400, impressions: 1240000, clicks: 38200, orders: 412, revenue: 78218.80, status: 'ATIVA', startDate: '2026-03-01' },
     { id: 'C002', platform: 'TikTok', name: 'Creatina - Remarketing', budget: 8000, spend: 7200, impressions: 620000, clicks: 18600, orders: 298, revenue: 44690.20, status: 'ATIVA', startDate: '2026-03-01' },
@@ -165,12 +216,18 @@ const SEED_EXPENSE_IDS = new Set(seedExpenses.map(e => e.id));
 const SEED_REVENUE_IDS = new Set(seedRevenues.map(r => r.id));
 const SEED_WITHDRAWAL_IDS = new Set(seedWithdrawals.map(w => w.id));
 const SEED_CAMPAIGN_IDS = new Set(seedCampaigns.map(c => c.id));
+const SEED_ATENDENTE_SALE_IDS = new Set(seedAtendenteSales.map(s => s.id));
 
 interface AppContextValue {
     expenses: Expense[];
     revenues: Revenue[];
     withdrawals: Withdrawal[];
     campaigns: Campaign[];
+    atendenteSales: AtendenteSale[];
+    atendentes: Atendente[];
+    addAtendente: (a: Omit<Atendente, 'id'>) => void;
+    updateAtendente: (id: string, a: Partial<Atendente>) => void;
+    deleteAtendente: (id: string) => void;
     addExpense: (e: Omit<Expense, 'id'>) => void;
     updateExpense: (id: string, e: Partial<Expense>) => void;
     deleteExpense: (id: string) => void;
@@ -182,6 +239,9 @@ interface AppContextValue {
     addCampaign: (c: Omit<Campaign, 'id'>) => void;
     updateCampaign: (id: string, c: Partial<Campaign>) => void;
     deleteCampaign: (id: string) => void;
+    addAtendenteSale: (s: Omit<AtendenteSale, 'id'>) => void;
+    updateAtendenteSale: (id: string, s: Partial<AtendenteSale>) => void;
+    deleteAtendenteSale: (id: string) => void;
     clearSeedData: () => void;
     // Computed KPIs
     kpis: {
@@ -205,6 +265,8 @@ let expenseCounter = 11;
 let revenueCounter = 24;
 let withdrawalCounter = seedWithdrawals.length + 1;
 let campaignCounter = seedCampaigns.length + 1;
+let atendenteSaleCounter = seedAtendenteSales.length + 1;
+let atendenteCounter = SEED_ATENDENTES.length + 1;
 
 const pad = (n: number, prefix: string) => `${prefix}${String(n).padStart(3, '0')}`;
 
@@ -213,6 +275,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [revenues, setRevenues] = useState<Revenue[]>(seedRevenues);
     const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(seedWithdrawals);
     const [campaigns, setCampaigns] = useState<Campaign[]>(seedCampaigns);
+    const [atendenteSales, setAtendenteSales] = useState<AtendenteSale[]>(seedAtendenteSales);
+    const [atendentes, setAtendentes] = useState<Atendente[]>(SEED_ATENDENTES);
 
     const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
         const id = pad(expenseCounter++, 'E');
@@ -262,11 +326,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCampaigns(prev => prev.filter(c => c.id !== id));
     }, []);
 
+    const addAtendente = useCallback((a: Omit<Atendente, 'id'>) => {
+        const id = `A${atendenteCounter++}`;
+        setAtendentes(prev => [...prev, { ...a, id }]);
+    }, []);
+
+    const updateAtendente = useCallback((id: string, patch: Partial<Atendente>) => {
+        setAtendentes(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+    }, []);
+
+    const deleteAtendente = useCallback((id: string) => {
+        setAtendentes(prev => prev.filter(a => a.id !== id));
+    }, []);
+
+    const addAtendenteSale = useCallback((s: Omit<AtendenteSale, 'id'>) => {
+        const id = pad(atendenteSaleCounter++, 'AT');
+        setAtendenteSales(prev => [{ ...s, id }, ...prev]);
+    }, []);
+
+    const updateAtendenteSale = useCallback((id: string, patch: Partial<AtendenteSale>) => {
+        setAtendenteSales(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
+    }, []);
+
+    const deleteAtendenteSale = useCallback((id: string) => {
+        setAtendenteSales(prev => prev.filter(s => s.id !== id));
+    }, []);
+
     const clearSeedData = useCallback(() => {
         setExpenses(prev => prev.filter(e => !SEED_EXPENSE_IDS.has(e.id)));
         setRevenues(prev => prev.filter(r => !SEED_REVENUE_IDS.has(r.id)));
         setWithdrawals(prev => prev.filter(w => !SEED_WITHDRAWAL_IDS.has(w.id)));
         setCampaigns(prev => prev.filter(c => !SEED_CAMPAIGN_IDS.has(c.id)));
+        setAtendenteSales(prev => prev.filter(s => !SEED_ATENDENTE_SALE_IDS.has(s.id)));
     }, []);
 
     const kpis = useMemo(() => {
@@ -319,11 +410,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AppContext.Provider value={{
-            expenses, revenues, withdrawals, campaigns,
+            expenses, revenues, withdrawals, campaigns, atendenteSales, atendentes,
             addExpense, updateExpense, deleteExpense,
             addRevenue, updateRevenue, deleteRevenue,
             addWithdrawal, deleteWithdrawal,
             addCampaign, updateCampaign, deleteCampaign,
+            addAtendenteSale, updateAtendenteSale, deleteAtendenteSale,
+            addAtendente, updateAtendente, deleteAtendente,
             clearSeedData,
             kpis,
         }}>

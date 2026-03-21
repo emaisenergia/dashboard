@@ -14,6 +14,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Rocket,
+    Users,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -26,6 +27,7 @@ const navPrincipal = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/operations-dashboard', badge: null },
     { label: 'Financeiro', icon: DollarSign, href: '/financial-management', badge: null },
     { label: 'Produtos', icon: Package, href: '/product-management', badge: null },
+    { label: 'Atendentes', icon: Users, href: '/atendentes', badge: null },
 ];
 
 const navAnalise = [
