@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, Plus, Pencil, Trash2, AlertTriangle, Package, X } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import type { Product, ProductStatus } from '@/context/AppContext';
@@ -203,12 +203,24 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
 
 // ── Main Table ─────────────────────────────────────────────────────────────────
 
-export default function ProductCatalogTable() {
+interface Props {
+    triggerNew?: boolean;
+    onTriggerConsumed?: () => void;
+}
+
+export default function ProductCatalogTable({ triggerNew, onTriggerConsumed }: Props = {}) {
     const { products, addProduct, updateProduct, deleteProduct } = useApp();
     const [search, setSearch] = useState('');
     const [catFilter, setCatFilter] = useState('Todas');
     const [statusFilter, setStatusFilter] = useState('Todos');
     const [modalProduct, setModalProduct] = useState<Product | null | 'new'>(null);
+
+    useEffect(() => {
+        if (triggerNew) {
+            setModalProduct('new');
+            onTriggerConsumed?.();
+        }
+    }, [triggerNew]);
 
     const categories = ['Todas', ...Array.from(new Set(products.map(p => p.categoria)))];
 

@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, Plus, Trash2, ShoppingCart, Banknote } from 'lucide-react';
+import { Search, ChevronDown, Plus, Trash2, Pencil, ShoppingCart, Banknote } from 'lucide-react';
 import { useApp, Revenue, ProductRevenue, OtherRevenue } from '@/context/AppContext';
 import RecordModal from './RecordModal';
+import { RevenueEditModal } from './QuickEditModal';
 import { toast } from 'sonner';
 
 const fmt = (v: number) =>
@@ -57,6 +58,7 @@ export default function RevenueTable() {
     const [typeFilter, setTypeFilter] = useState('Todos');
     const [statusFilter, setStatusFilter] = useState('Todos');
     const [modalOpen, setModalOpen] = useState(false);
+    const [editingRevenue, setEditingRevenue] = useState<Revenue | null>(null);
 
     const filtered = useMemo(() => revenues.filter(r => {
         const desc = getDescription(r).toLowerCase();
@@ -161,6 +163,7 @@ export default function RevenueTable() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => setEditingRevenue(r)} style={{ color: 'hsl(215 20% 55%)' }} className="hover:text-white transition-colors"><Pencil size={14} /></button>
                                                 <button onClick={() => handleDelete(r.id)} style={{ color: 'hsl(215 20% 55%)' }} className="hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                             </div>
                                         </td>
@@ -176,6 +179,7 @@ export default function RevenueTable() {
             </div>
 
             <RecordModal open={modalOpen} initialMode="revenue" onClose={() => setModalOpen(false)} />
+            {editingRevenue && <RevenueEditModal revenue={editingRevenue} onClose={() => setEditingRevenue(null)} />}
         </>
     );
 }

@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, ChevronDown, Plus, Pencil, Trash2, Megaphone, Package, MoreHorizontal } from 'lucide-react';
 import { useApp, Expense, AdExpense, ProductExpense, OtherExpense } from '@/context/AppContext';
 import RecordModal from './RecordModal';
+import { ExpenseEditModal } from './QuickEditModal';
 import { toast } from 'sonner';
 
 const fmt = (v: number) =>
@@ -70,6 +71,7 @@ export default function ExpenseTable() {
     const [typeFilter, setTypeFilter] = useState('Todos');
     const [statusFilter, setStatusFilter] = useState('Todos');
     const [modalOpen, setModalOpen] = useState(false);
+    const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
     const filtered = useMemo(() => expenses.filter(e => {
         const desc = getDescription(e).toLowerCase();
@@ -167,7 +169,7 @@ export default function ExpenseTable() {
                                         <td className="px-4 py-3 max-w-[140px] truncate" style={{ color: 'hsl(215 20% 50%)' }}>{getNotes(e)}</td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button style={{ color: 'hsl(215 20% 55%)' }} className="hover:text-white transition-colors"><Pencil size={14} /></button>
+                                                <button onClick={() => setEditingExpense(e)} style={{ color: 'hsl(215 20% 55%)' }} className="hover:text-white transition-colors"><Pencil size={14} /></button>
                                                 <button onClick={() => handleDelete(e.id)} style={{ color: 'hsl(215 20% 55%)' }} className="hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                             </div>
                                         </td>
@@ -183,6 +185,7 @@ export default function ExpenseTable() {
             </div>
 
             <RecordModal open={modalOpen} initialMode="expense" onClose={() => setModalOpen(false)} />
+            {editingExpense && <ExpenseEditModal expense={editingExpense} onClose={() => setEditingExpense(null)} />}
         </>
     );
 }
