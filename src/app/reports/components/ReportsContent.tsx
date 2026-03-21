@@ -1,10 +1,12 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
+import type { Expense, Revenue } from '@/context/AppContext';
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { BarChart2 } from 'lucide-react';
 
 const fmt = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(v);
@@ -28,17 +30,55 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     );
 };
 
-const monthlyData = [
-    { mes: 'Out/25', receita: 210000, despesas: 148000, lucro: 62000 },
-    { mes: 'Nov/25', receita: 245000, despesas: 162000, lucro: 83000 },
-    { mes: 'Dez/25', receita: 298000, despesas: 185000, lucro: 113000 },
-    { mes: 'Jan/26', receita: 252000, despesas: 170000, lucro: 82000 },
-    { mes: 'Fev/26', receita: 271000, despesas: 178000, lucro: 93000 },
-    { mes: 'Mar/26', receita: 312840, despesas: 198621, lucro: 80000 },
-];
+function monthKey(date: string): { label: string; sortKey: string } {
+    const [year, month] = date.split('-');
+    const d = new Date(Number(year), Number(month) - 1, 1);
+    const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+        .replace('.', '').replace(' de ', '/').replace(' ', '/');
+    return { label, sortKey: date.substring(0, 7) };
+}
+
+function getExpenseValue(e: Expense): number {
+    if (e.status === 'CANCELADO') return 0;
+    if (e.type === 'product') return e.quantity * e.unitCost;
+    return e.amount;
+}
+
+function getRevenueValue(r: Revenue): number {
+    if (r.status === 'CANCELADO') return 0;
+    if (r.type === 'product_sale') return r.total;
+    return r.amount;
+}
 
 export default function ReportsContent() {
     const { kpis, campaigns, expenses, revenues } = useApp();
+
+    const monthlyData = useMemo(() => {
+        const map = new Map<string, { sortKey: string; receita: number; despesas: number }>();
+
+        revenues.forEach(r => {
+            const { label, sortKey } = monthKey(r.date);
+            const entry = map.get(label) ?? { sortKey, receita: 0, despesas: 0 };
+            entry.receita += getRevenueValue(r);
+            map.set(label, entry);
+        });
+
+        expenses.forEach(e => {
+            const { label, sortKey } = monthKey(e.date);
+            const entry = map.get(label) ?? { sortKey, receita: 0, despesas: 0 };
+            entry.despesas += getExpenseValue(e);
+            map.set(label, entry);
+        });
+
+        return Array.from(map.entries())
+            .sort(([, a], [, b]) => a.sortKey.localeCompare(b.sortKey))
+            .map(([mes, vals]) => ({
+                mes,
+                receita: vals.receita,
+                despesas: vals.despesas,
+                lucro: vals.receita - vals.despesas,
+            }));
+    }, [revenues, expenses]);
 
     const topCampaigns = [...campaigns]
         .sort((a, b) => b.revenue - a.revenue)
@@ -75,29 +115,38 @@ export default function ReportsContent() {
                 {/* Revenue vs Expenses */}
                 <div className="rounded-xl p-5"
                     style={{ background: 'hsl(222 40% 10%)', border: '1px solid hsl(222 30% 16%)' }}>
-                    <h3 className="text-sm font-semibold text-white mb-1">Receita vs Despesas (6 meses)</h3>
-                    <p className="text-xs mb-4" style={{ color: 'hsl(215 20% 50%)' }}>Evolução histórica</p>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <AreaChart data={monthlyData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="receitaGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="hsl(142 71% 45%)" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="hsl(142 71% 45%)" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="despesasGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="hsl(0 84% 60%)" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="hsl(0 84% 60%)" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 16%)" vertical={false} />
-                            <XAxis dataKey="mes" tick={{ fill: 'hsl(215 20% 45%)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                            <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fill: 'hsl(215 20% 45%)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend wrapperStyle={{ fontSize: 12, color: 'hsl(215 20% 60%)', paddingTop: 8 }} />
-                            <Area type="monotone" dataKey="receita" name="Receita" stroke="hsl(142 71% 45%)" fill="url(#receitaGrad)" strokeWidth={2} />
-                            <Area type="monotone" dataKey="despesas" name="Despesas" stroke="hsl(0 84% 60%)" fill="url(#despesasGrad)" strokeWidth={2} />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                    <h3 className="text-sm font-semibold text-white mb-1">Receita vs Despesas</h3>
+                    <p className="text-xs mb-4" style={{ color: 'hsl(215 20% 50%)' }}>
+                        {monthlyData.length > 0 ? `${monthlyData.length} ${monthlyData.length === 1 ? 'mês' : 'meses'} com dados` : 'Evolução histórica'}
+                    </p>
+                    {monthlyData.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-[220px] gap-3">
+                            <BarChart2 size={28} style={{ color: 'hsl(215 20% 30%)' }} />
+                            <p className="text-sm" style={{ color: 'hsl(215 20% 45%)' }}>Nenhum dado financeiro registrado</p>
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={220}>
+                            <AreaChart data={monthlyData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="receitaGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="hsl(142 71% 45%)" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="hsl(142 71% 45%)" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="despesasGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="hsl(0 84% 60%)" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="hsl(0 84% 60%)" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 16%)" vertical={false} />
+                                <XAxis dataKey="mes" tick={{ fill: 'hsl(215 20% 45%)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fill: 'hsl(215 20% 45%)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: 12, color: 'hsl(215 20% 60%)', paddingTop: 8 }} />
+                                <Area type="monotone" dataKey="receita" name="Receita" stroke="hsl(142 71% 45%)" fill="url(#receitaGrad)" strokeWidth={2} />
+                                <Area type="monotone" dataKey="despesas" name="Despesas" stroke="hsl(0 84% 60%)" fill="url(#despesasGrad)" strokeWidth={2} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
 
                 {/* Revenue by platform */}
@@ -105,15 +154,22 @@ export default function ReportsContent() {
                     style={{ background: 'hsl(222 40% 10%)', border: '1px solid hsl(222 30% 16%)' }}>
                     <h3 className="text-sm font-semibold text-white mb-1">Receita por Plataforma</h3>
                     <p className="text-xs mb-4" style={{ color: 'hsl(215 20% 50%)' }}>Campanhas ativas</p>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={platformData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }} barSize={28}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 16%)" vertical={false} />
-                            <XAxis dataKey="platform" tick={{ fill: 'hsl(215 20% 45%)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                            <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fill: 'hsl(215 20% 45%)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Bar dataKey="receita" name="Receita" fill="hsl(262 83% 66%)" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {platformData.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-[220px] gap-3">
+                            <BarChart2 size={28} style={{ color: 'hsl(215 20% 30%)' }} />
+                            <p className="text-sm" style={{ color: 'hsl(215 20% 45%)' }}>Nenhuma campanha registrada</p>
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={220}>
+                            <BarChart data={platformData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }} barSize={28}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 30% 16%)" vertical={false} />
+                                <XAxis dataKey="platform" tick={{ fill: 'hsl(215 20% 45%)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fill: 'hsl(215 20% 45%)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Bar dataKey="receita" name="Receita" fill="hsl(262 83% 66%)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             </div>
 

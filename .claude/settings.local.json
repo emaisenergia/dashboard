@@ -4,7 +4,9 @@
       "Bash(find /Users/amandagoedert/Downloads/dashboard/src -type f -name \"*.tsx\" -exec wc -l {} +)",
       "mcp__Claude_Preview__preview_start",
       "Bash(wc -l /Users/amandagoedert/Downloads/dashboard/src/app/financial-management/components/*.tsx /Users/amandagoedert/Downloads/dashboard/src/app/operations-dashboard/components/*.tsx)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)"
     ]
   }
 }

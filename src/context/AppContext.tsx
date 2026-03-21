@@ -93,6 +93,21 @@ export interface Campaign {
     startDate: string;
 }
 
+export type ProductStatus = 'ATIVO' | 'INATIVO' | 'RASCUNHO';
+
+export interface Product {
+    id: string;
+    sku: string;
+    nome: string;
+    categoria: string;
+    catColor: string;
+    custo: number;
+    preco: number;
+    estoque: number;
+    estoqueMinimo: number;
+    status: ProductStatus;
+}
+
 export type SaleStatus = 'RECEBIDO' | 'PENDENTE' | 'CANCELADO';
 
 export interface AtendenteSale {
@@ -146,6 +161,10 @@ interface AppContextValue {
     campaigns: Campaign[];
     atendenteSales: AtendenteSale[];
     atendentes: Atendente[];
+    products: Product[];
+    addProduct: (p: Omit<Product, 'id'>) => void;
+    updateProduct: (id: string, p: Partial<Product>) => void;
+    deleteProduct: (id: string) => void;
     addAtendente: (a: Omit<Atendente, 'id'>) => void;
     updateAtendente: (id: string, a: Partial<Atendente>) => void;
     deleteAtendente: (id: string) => void;
@@ -188,6 +207,7 @@ let withdrawalCounter = 1;
 let campaignCounter = 1;
 let atendenteSaleCounter = 1;
 let atendenteCounter = 1;
+let productCounter = 1;
 
 const pad = (n: number, prefix: string) => `${prefix}${String(n).padStart(3, '0')}`;
 
@@ -198,6 +218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [campaigns, setCampaigns] = useState<Campaign[]>(seedCampaigns);
     const [atendenteSales, setAtendenteSales] = useState<AtendenteSale[]>(seedAtendenteSales);
     const [atendentes, setAtendentes] = useState<Atendente[]>(SEED_ATENDENTES);
+    const [products, setProducts] = useState<Product[]>([]);
 
     const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
         const id = pad(expenseCounter++, 'E');
@@ -245,6 +266,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const deleteCampaign = useCallback((id: string) => {
         setCampaigns(prev => prev.filter(c => c.id !== id));
+    }, []);
+
+    const addProduct = useCallback((p: Omit<Product, 'id'>) => {
+        const id = pad(productCounter++, 'P');
+        setProducts(prev => [{ ...p, id }, ...prev]);
+    }, []);
+
+    const updateProduct = useCallback((id: string, patch: Partial<Product>) => {
+        setProducts(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+    }, []);
+
+    const deleteProduct = useCallback((id: string) => {
+        setProducts(prev => prev.filter(p => p.id !== id));
     }, []);
 
     const addAtendente = useCallback((a: Omit<Atendente, 'id'>) => {
@@ -331,7 +365,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AppContext.Provider value={{
-            expenses, revenues, withdrawals, campaigns, atendenteSales, atendentes,
+            expenses, revenues, withdrawals, campaigns, atendenteSales, atendentes, products,
+            addProduct, updateProduct, deleteProduct,
             addExpense, updateExpense, deleteExpense,
             addRevenue, updateRevenue, deleteRevenue,
             addWithdrawal, deleteWithdrawal,
