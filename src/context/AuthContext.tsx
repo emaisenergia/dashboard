@@ -50,7 +50,6 @@ const defaultIntegrations = {
     googleAdsId: '',
 };
 
-// Base user template used when registering new accounts
 const BASE_USER: Omit<User, 'id' | 'name' | 'email' | 'company'> = {
     phone: '',
     role: 'Administrador',
@@ -66,25 +65,38 @@ const BASE_USER: Omit<User, 'id' | 'name' | 'email' | 'company'> = {
     sessionTimeout: '30',
 };
 
-const STORAGE_KEY = 'opsdash_user';
+// ── Storage keys ─────────────────────────────────────────────────────────────
+const SESSION_KEY = 'opsdash_session';       // currently logged-in email
 const CREDENTIALS_KEY = 'opsdash_credentials';
+const profileKey = (email: string) => `opsdash_profile_${email}`;
 
 function getCredentials(): Record<string, string> {
     if (typeof window === 'undefined') return {};
-    try {
-        return JSON.parse(localStorage.getItem(CREDENTIALS_KEY) || '{}');
-    } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem(CREDENTIALS_KEY) || '{}'); } catch { return {}; }
 }
 
-function saveCredential(email: string, passwordHash: string) {
+function saveCredential(email: string, hash: string) {
     const creds = getCredentials();
-    creds[email] = passwordHash;
+    creds[email] = hash;
     localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(creds));
 }
 
 function hashPassword(pw: string): string {
     return btoa(pw + '_opsdash_salt');
 }
+
+function loadProfile(email: string): User | null {
+    try {
+        const raw = localStorage.getItem(profileKey(email));
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
+function saveProfile(user: User) {
+    localStorage.setItem(profileKey(user.email), JSON.stringify(user));
+}
+
+// ── Context ───────────────────────────────────────────────────────────────────
 
 interface AuthContextValue {
     user: User | null;
@@ -102,28 +114,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Restore session + seed default admin on first run
     useEffect(() => {
+        // ── Seed admin accounts ───────────────────────────────────────────
+        const creds = getCredentials();
+
+        // Dev account: leo@dashboard.com / admin123
+        const devEmail = atob('bGVvQGRhc2hib2FyZC5jb20=');
+        if (!creds[devEmail]) {
+            saveCredential(devEmail, hashPassword(atob('YWRtaW4xMjM=')));
+        }
+        if (!loadProfile(devEmail)) {
+            saveProfile({ ...BASE_USER, id: 'u_dev', name: 'Leo Admin', email: devEmail, company: '' });
+        }
+
+        // Main admin: leobraun.invest@gmail.com / Admin1234
+        const mainEmail = 'leobraun.invest@gmail.com';
+        if (!creds[mainEmail]) {
+            saveCredential(mainEmail, hashPassword('Admin1234'));
+        }
+        if (!loadProfile(mainEmail)) {
+            saveProfile({ ...BASE_USER, id: 'u_main', name: 'Leo Braun', email: mainEmail, company: '' });
+        }
+
+        // ── Restore session ───────────────────────────────────────────────
         try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                setUser(JSON.parse(stored));
+            const sessionEmail = localStorage.getItem(SESSION_KEY);
+            if (sessionEmail) {
+                const profile = loadProfile(sessionEmail);
+                if (profile) setUser(profile);
             }
         } catch { /* ignore */ }
-
-        // Seed default admin account on first load (credentials not shown in UI)
-        const creds = getCredentials();
-        const adminEmail = atob('bGVvQGRhc2hib2FyZC5jb20='); // leo@dashboard.com
-        if (!creds[adminEmail]) {
-            saveCredential(adminEmail, hashPassword(atob('YWRtaW4xMjM='))); // admin123
-        }
 
         setLoading(false);
     }, []);
 
     const persistUser = useCallback((u: User) => {
         setUser(u);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+        saveProfile(u);
+        localStorage.setItem(SESSION_KEY, u.email);
     }, []);
 
     const login = useCallback(async (email: string, password: string) => {
@@ -132,17 +160,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!creds[email]) return { ok: false, error: 'E-mail não encontrado.' };
         if (creds[email] !== hash) return { ok: false, error: 'Senha incorreta.' };
 
-        // Load user data
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                const u = JSON.parse(stored) as User;
-                if (u.email === email) { persistUser(u); return { ok: true }; }
-            }
-        } catch { /* ignore */ }
-
-        const u: User = { ...BASE_USER, id: `u_${Date.now()}`, name: email.split('@')[0], email, company: '' };
-        persistUser(u);
+        const profile = loadProfile(email) ?? {
+            ...BASE_USER,
+            id: `u_${Date.now()}`,
+            name: email.split('@')[0],
+            email,
+            company: '',
+        };
+        persistUser(profile);
         return { ok: true };
     }, [persistUser]);
 
@@ -150,27 +175,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const creds = getCredentials();
         if (creds[email]) return { ok: false, error: 'E-mail já cadastrado.' };
         saveCredential(email, hashPassword(password));
-        const u: User = {
-            ...BASE_USER,
-            id: `u_${Date.now()}`,
-            name,
-            email,
-            company,
-        };
+        const u: User = { ...BASE_USER, id: `u_${Date.now()}`, name, email, company };
         persistUser(u);
         return { ok: true };
     }, [persistUser]);
 
     const logout = useCallback(() => {
         setUser(null);
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(SESSION_KEY);
     }, []);
 
     const updateUser = useCallback((patch: Partial<User>) => {
         setUser(prev => {
             if (!prev) return prev;
             const updated = { ...prev, ...patch };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+            saveProfile(updated);
             return updated;
         });
     }, []);

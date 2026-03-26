@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { ArrowUpRight, Trash2, ArrowDownUp, X } from 'lucide-react';
+import { ArrowUpRight, Trash2, ArrowDownUp, X, Pencil } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import type { Withdrawal } from '@/context/AppContext';
 import { toast } from 'sonner';
@@ -16,21 +16,22 @@ const sStyles: Record<WStatus, { bg: string; color: string }> = {
     AGENDADO: { bg: 'hsl(262 83% 15%)', color: 'hsl(262 83% 70%)' },
 };
 
-// ── Modal ──────────────────────────────────────────────────────────────────────
+// ── Add/Edit Modal ─────────────────────────────────────────────────────────────
 
 interface WithdrawalModalProps {
+    initial?: Withdrawal | null;
     onClose: () => void;
     onSave: (data: Omit<Withdrawal, 'id'>) => void;
 }
 
-function WithdrawalModal({ onClose, onSave }: WithdrawalModalProps) {
+function WithdrawalModal({ initial, onClose, onSave }: WithdrawalModalProps) {
     const today = new Date().toISOString().split('T')[0];
     const [form, setForm] = useState({
-        desc: '',
-        destino: '',
-        valor: '',
-        data: today,
-        status: 'PENDENTE' as WStatus,
+        desc: initial?.desc ?? '',
+        destino: initial?.destino ?? '',
+        valor: initial ? String(initial.valor) : '',
+        data: initial?.data ?? today,
+        status: initial?.status ?? ('PENDENTE' as WStatus),
     });
 
     const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
@@ -41,13 +42,7 @@ function WithdrawalModal({ onClose, onSave }: WithdrawalModalProps) {
         if (!form.desc.trim()) { toast.error('Informe uma descrição'); return; }
         if (!form.destino.trim()) { toast.error('Informe o destino'); return; }
         if (!valor || valor <= 0) { toast.error('Informe um valor válido'); return; }
-        onSave({
-            desc: form.desc.trim(),
-            destino: form.destino.trim(),
-            valor,
-            data: form.data,
-            status: form.status,
-        });
+        onSave({ desc: form.desc.trim(), destino: form.destino.trim(), valor, data: form.data, status: form.status });
     }
 
     return (
@@ -58,7 +53,7 @@ function WithdrawalModal({ onClose, onSave }: WithdrawalModalProps) {
                 style={{ background: 'hsl(222 47% 9%)', border: '1px solid hsl(222 30% 18%)' }}>
                 <div className="flex items-center justify-between px-6 py-4"
                     style={{ borderBottom: '1px solid hsl(222 30% 16%)' }}>
-                    <h2 className="text-base font-semibold text-white">Novo Saque</h2>
+                    <h2 className="text-base font-semibold text-white">{initial ? 'Editar Saque' : 'Novo Saque'}</h2>
                     <button onClick={onClose} className="hover:text-white transition-colors"
                         style={{ color: 'hsl(215 20% 50%)' }}>
                         <X size={18} />
@@ -119,7 +114,7 @@ function WithdrawalModal({ onClose, onSave }: WithdrawalModalProps) {
                         <button type="submit"
                             className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
                             style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(240 83% 52%))' }}>
-                            Registrar Saque
+                            {initial ? 'Salvar Alterações' : 'Registrar Saque'}
                         </button>
                     </div>
                 </form>
@@ -131,15 +126,23 @@ function WithdrawalModal({ onClose, onSave }: WithdrawalModalProps) {
 // ── Table ──────────────────────────────────────────────────────────────────────
 
 export default function WithdrawalTable() {
-    const { withdrawals, addWithdrawal, deleteWithdrawal } = useApp();
+    const { withdrawals, addWithdrawal, updateWithdrawal, deleteWithdrawal, clearWithdrawals } = useApp();
     const [showModal, setShowModal] = useState(false);
+    const [editingW, setEditingW] = useState<Withdrawal | null>(null);
 
-    const total = withdrawals.reduce((acc, w) => acc + w.valor, 0);
+    const total = withdrawals.filter(w => w.status === 'CONCLUÍDO').reduce((acc, w) => acc + w.valor, 0);
+    const totalAll = withdrawals.reduce((acc, w) => acc + w.valor, 0);
 
     function handleSave(data: Omit<Withdrawal, 'id'>) {
-        addWithdrawal(data);
-        toast.success('Saque registrado');
-        setShowModal(false);
+        if (editingW) {
+            updateWithdrawal(editingW.id, data);
+            toast.success('Saque atualizado');
+            setEditingW(null);
+        } else {
+            addWithdrawal(data);
+            toast.success('Saque registrado');
+            setShowModal(false);
+        }
     }
 
     function handleDelete(w: Withdrawal) {
@@ -148,8 +151,13 @@ export default function WithdrawalTable() {
         toast.success('Saque excluído');
     }
 
+    function handleClearAll() {
+        if (!confirm(`Excluir todos os ${withdrawals.length} saques? Essa ação não pode ser desfeita.`)) return;
+        clearWithdrawals();
+        toast.success('Todos os saques foram removidos');
+    }
+
     function formatDate(d: string) {
-        // supports both "YYYY-MM-DD" and "DD/MM/YYYY"
         if (d.includes('-')) {
             const [y, m, day] = d.split('-');
             return `${day}/${m}/${y}`;
@@ -168,15 +176,24 @@ export default function WithdrawalTable() {
                         <p className="text-xs mt-0.5" style={{ color: 'hsl(215 20% 50%)' }}>
                             {withdrawals.length === 0
                                 ? 'Nenhum saque registrado'
-                                : `Total: ${fmt(total)} · ${withdrawals.length} ${withdrawals.length === 1 ? 'saque' : 'saques'}`}
+                                : `Concluídos: ${fmt(total)} · Total: ${fmt(totalAll)} · ${withdrawals.length} ${withdrawals.length === 1 ? 'saque' : 'saques'}`}
                         </p>
                     </div>
-                    <button onClick={() => setShowModal(true)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white"
-                        style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(240 83% 52%))' }}>
-                        <ArrowUpRight size={14} />
-                        Novo Saque
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {withdrawals.length > 0 && (
+                            <button onClick={handleClearAll}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium"
+                                style={{ background: 'hsl(0 60% 14%)', border: '1px solid hsl(0 60% 22%)', color: 'hsl(0 84% 60%)' }}>
+                                <Trash2 size={13} /> Limpar tudo
+                            </button>
+                        )}
+                        <button onClick={() => setShowModal(true)}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white"
+                            style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(240 83% 52%))' }}>
+                            <ArrowUpRight size={14} />
+                            Novo Saque
+                        </button>
+                    </div>
                 </div>
 
                 {withdrawals.length === 0 ? (
@@ -216,6 +233,11 @@ export default function WithdrawalTable() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => setEditingW(w)}
+                                                        style={{ color: 'hsl(215 20% 55%)' }}
+                                                        className="hover:text-white transition-colors">
+                                                        <Pencil size={14} />
+                                                    </button>
                                                     <button onClick={() => handleDelete(w)}
                                                         style={{ color: 'hsl(215 20% 55%)' }}
                                                         className="hover:text-red-400 transition-colors">
@@ -235,6 +257,13 @@ export default function WithdrawalTable() {
             {showModal && (
                 <WithdrawalModal
                     onClose={() => setShowModal(false)}
+                    onSave={handleSave}
+                />
+            )}
+            {editingW && (
+                <WithdrawalModal
+                    initial={editingW}
+                    onClose={() => setEditingW(null)}
                     onSave={handleSave}
                 />
             )}

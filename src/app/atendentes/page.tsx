@@ -368,7 +368,7 @@ function SaleModal({ sale, atendentes, onClose, onSave }: SaleModalProps) {
 
 function AtendentesContent() {
     const {
-        atendenteSales, addAtendenteSale, updateAtendenteSale, deleteAtendenteSale,
+        atendenteSales, addAtendenteSale, updateAtendenteSale, deleteAtendenteSale, clearAtendenteSales,
         atendentes, addAtendente, updateAtendente, deleteAtendente,
     } = useApp();
 
@@ -431,6 +431,19 @@ function AtendentesContent() {
         toast.success('Venda removida.');
     }
 
+    function handleClearAllSales() {
+        const count = selectedTab === 'all'
+            ? atendenteSales.length
+            : atendenteSales.filter(s => s.atendenteId === selectedTab).length;
+        if (!confirm(`Excluir ${count} venda(s)? Essa ação não pode ser desfeita.`)) return;
+        if (selectedTab === 'all') {
+            clearAtendenteSales();
+        } else {
+            filteredSales.forEach(s => deleteAtendenteSale(s.id));
+        }
+        toast.success('Vendas removidas.');
+    }
+
     function handleSaveAtendente(data: Omit<Atendente, 'id'>) {
         if (editAtendente) { updateAtendente(editAtendente.id, data); toast.success('Atendente atualizado.'); }
         else               { addAtendente(data);                      toast.success('Atendente cadastrado.'); }
@@ -475,6 +488,13 @@ function AtendentesContent() {
                         <Settings2 size={15} />
                         Atendentes
                     </button>
+                    {filteredSales.length > 0 && (
+                        <button onClick={handleClearAllSales}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium"
+                            style={{ background: 'hsl(0 60% 14%)', border: '1px solid hsl(0 60% 22%)', color: 'hsl(0 84% 60%)' }}>
+                            <Trash2 size={13} /> Limpar tudo
+                        </button>
+                    )}
                     <button
                         onClick={() => { setEditSale(undefined); setShowSaleModal(true); }}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"

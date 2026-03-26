@@ -66,7 +66,7 @@ const catColors: Record<string, string> = {
 };
 
 export default function ExpenseTable() {
-    const { expenses, deleteExpense } = useApp();
+    const { expenses, deleteExpense, clearExpenses } = useApp();
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('Todos');
     const [statusFilter, setStatusFilter] = useState('Todos');
@@ -87,6 +87,12 @@ export default function ExpenseTable() {
     function handleDelete(id: string) {
         deleteExpense(id);
         toast.success('Despesa removida');
+    }
+
+    function handleClearAll() {
+        if (!confirm(`Excluir todas as ${expenses.length} despesas? Essa ação não pode ser desfeita.`)) return;
+        clearExpenses();
+        toast.success('Todas as despesas foram removidas');
     }
 
     return (
@@ -125,6 +131,13 @@ export default function ExpenseTable() {
                         <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: 'hsl(215 20% 50%)' }} />
                     </div>
+                    {expenses.length > 0 && (
+                        <button onClick={handleClearAll}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
+                            style={{ background: 'hsl(0 60% 14%)', border: '1px solid hsl(0 60% 22%)', color: 'hsl(0 84% 60%)' }}>
+                            <Trash2 size={13} /> Limpar tudo
+                        </button>
+                    )}
                     <button onClick={() => setModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white whitespace-nowrap"
                         style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(240 83% 52%))' }}>

@@ -209,7 +209,7 @@ interface Props {
 }
 
 export default function ProductCatalogTable({ triggerNew, onTriggerConsumed }: Props = {}) {
-    const { products, addProduct, updateProduct, deleteProduct } = useApp();
+    const { products, addProduct, updateProduct, deleteProduct, clearProducts } = useApp();
     const [search, setSearch] = useState('');
     const [catFilter, setCatFilter] = useState('Todas');
     const [statusFilter, setStatusFilter] = useState('Todos');
@@ -246,6 +246,12 @@ export default function ProductCatalogTable({ triggerNew, onTriggerConsumed }: P
         if (!confirm(`Excluir o produto "${p.nome}"? Esta ação não pode ser desfeita.`)) return;
         deleteProduct(p.id);
         toast.success('Produto excluído');
+    }
+
+    function handleClearAll() {
+        if (!confirm(`Excluir todos os ${products.length} produtos? Essa ação não pode ser desfeita.`)) return;
+        clearProducts();
+        toast.success('Todos os produtos foram removidos');
     }
 
     return (
@@ -285,6 +291,13 @@ export default function ProductCatalogTable({ triggerNew, onTriggerConsumed }: P
                         <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: 'hsl(215 20% 50%)' }} />
                     </div>
+                    {products.length > 0 && (
+                        <button onClick={handleClearAll}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
+                            style={{ background: 'hsl(0 60% 14%)', border: '1px solid hsl(0 60% 22%)', color: 'hsl(0 84% 60%)' }}>
+                            <Trash2 size={13} /> Limpar tudo
+                        </button>
+                    )}
                     <button onClick={() => setModalProduct('new')}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white whitespace-nowrap"
                         style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(240 83% 52%))' }}>

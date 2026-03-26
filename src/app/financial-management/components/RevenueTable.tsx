@@ -53,7 +53,7 @@ function fmtDate(d: string): string {
 }
 
 export default function RevenueTable() {
-    const { revenues, deleteRevenue } = useApp();
+    const { revenues, deleteRevenue, clearRevenues } = useApp();
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('Todos');
     const [statusFilter, setStatusFilter] = useState('Todos');
@@ -75,6 +75,12 @@ export default function RevenueTable() {
     function handleDelete(id: string) {
         deleteRevenue(id);
         toast.success('Receita removida');
+    }
+
+    function handleClearAll() {
+        if (!confirm(`Excluir todas as ${revenues.length} receitas? Essa ação não pode ser desfeita.`)) return;
+        clearRevenues();
+        toast.success('Todas as receitas foram removidas');
     }
 
     return (
@@ -121,6 +127,13 @@ export default function RevenueTable() {
                         <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: 'hsl(215 20% 50%)' }} />
                     </div>
+                    {revenues.length > 0 && (
+                        <button onClick={handleClearAll}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
+                            style={{ background: 'hsl(0 60% 14%)', border: '1px solid hsl(0 60% 22%)', color: 'hsl(0 84% 60%)' }}>
+                            <Trash2 size={13} /> Limpar tudo
+                        </button>
+                    )}
                     <button onClick={() => setModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white whitespace-nowrap"
                         style={{ background: 'linear-gradient(135deg, hsl(142 60% 35%), hsl(142 80% 28%))' }}>

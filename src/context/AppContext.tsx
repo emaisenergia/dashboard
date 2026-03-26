@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -131,28 +131,49 @@ export interface Atendente {
     cor: string;
 }
 
-export const SEED_ATENDENTES: Atendente[] = [];
+// ─── localStorage helpers ────────────────────────────────────────────────────
 
-// ─── Initial seed data ───────────────────────────────────────────────────────
+const LS_KEYS = {
+    expenses: 'opsdash_expenses',
+    revenues: 'opsdash_revenues',
+    withdrawals: 'opsdash_withdrawals',
+    campaigns: 'opsdash_campaigns',
+    atendenteSales: 'opsdash_atendenteSales',
+    atendentes: 'opsdash_atendentes',
+    products: 'opsdash_products',
+    counters: 'opsdash_counters',
+};
 
-const seedExpenses: Expense[] = [];
+function lsGet<T>(key: string, fallback: T): T {
+    if (typeof window === 'undefined') return fallback;
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+        return fallback;
+    }
+}
 
-const seedRevenues: Revenue[] = [];
+function lsSet(key: string, value: unknown) {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch { /* quota exceeded — ignore */ }
+}
 
-const seedWithdrawals: Withdrawal[] = [];
+function loadCounters() {
+    return lsGet(LS_KEYS.counters, {
+        expense: 1,
+        revenue: 1,
+        withdrawal: 1,
+        campaign: 1,
+        atendenteSale: 1,
+        atendente: 1,
+        product: 1,
+    });
+}
 
-const seedAtendenteSales: AtendenteSale[] = [];
-
-const seedCampaigns: Campaign[] = [];
-
-// ─── Context ─────────────────────────────────────────────────────────────────
-
-// IDs that belong to seed/demo data — used to identify what to clear
-const SEED_EXPENSE_IDS = new Set(seedExpenses.map(e => e.id));
-const SEED_REVENUE_IDS = new Set(seedRevenues.map(r => r.id));
-const SEED_WITHDRAWAL_IDS = new Set(seedWithdrawals.map(w => w.id));
-const SEED_CAMPAIGN_IDS = new Set(seedCampaigns.map(c => c.id));
-const SEED_ATENDENTE_SALE_IDS = new Set(seedAtendenteSales.map(s => s.id));
+// ─── Context interface ───────────────────────────────────────────────────────
 
 interface AppContextValue {
     expenses: Expense[];
@@ -162,28 +183,44 @@ interface AppContextValue {
     atendenteSales: AtendenteSale[];
     atendentes: Atendente[];
     products: Product[];
+
     addProduct: (p: Omit<Product, 'id'>) => void;
     updateProduct: (id: string, p: Partial<Product>) => void;
     deleteProduct: (id: string) => void;
+    clearProducts: () => void;
+
     addAtendente: (a: Omit<Atendente, 'id'>) => void;
     updateAtendente: (id: string, a: Partial<Atendente>) => void;
     deleteAtendente: (id: string) => void;
+
     addExpense: (e: Omit<Expense, 'id'>) => void;
     updateExpense: (id: string, e: Partial<Expense>) => void;
     deleteExpense: (id: string) => void;
+    clearExpenses: () => void;
+
     addRevenue: (r: Omit<Revenue, 'id'>) => void;
     updateRevenue: (id: string, r: Partial<Revenue>) => void;
     deleteRevenue: (id: string) => void;
+    clearRevenues: () => void;
+
     addWithdrawal: (w: Omit<Withdrawal, 'id'>) => void;
+    updateWithdrawal: (id: string, patch: Partial<Withdrawal>) => void;
     deleteWithdrawal: (id: string) => void;
+    clearWithdrawals: () => void;
+
     addCampaign: (c: Omit<Campaign, 'id'>) => void;
     updateCampaign: (id: string, c: Partial<Campaign>) => void;
     deleteCampaign: (id: string) => void;
+    clearCampaigns: () => void;
+
     addAtendenteSale: (s: Omit<AtendenteSale, 'id'>) => void;
     updateAtendenteSale: (id: string, s: Partial<AtendenteSale>) => void;
     deleteAtendenteSale: (id: string) => void;
+    clearAtendenteSales: () => void;
+
+    clearAll: () => void;
     clearSeedData: () => void;
-    // Computed KPIs
+
     kpis: {
         totalExpenses: number;
         totalRevenue: number;
@@ -201,27 +238,36 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-let expenseCounter = 1;
-let revenueCounter = 1;
-let withdrawalCounter = 1;
-let campaignCounter = 1;
-let atendenteSaleCounter = 1;
-let atendenteCounter = 1;
-let productCounter = 1;
-
 const pad = (n: number, prefix: string) => `${prefix}${String(n).padStart(3, '0')}`;
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-    const [expenses, setExpenses] = useState<Expense[]>(seedExpenses);
-    const [revenues, setRevenues] = useState<Revenue[]>(seedRevenues);
-    const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(seedWithdrawals);
-    const [campaigns, setCampaigns] = useState<Campaign[]>(seedCampaigns);
-    const [atendenteSales, setAtendenteSales] = useState<AtendenteSale[]>(seedAtendenteSales);
-    const [atendentes, setAtendentes] = useState<Atendente[]>(SEED_ATENDENTES);
-    const [products, setProducts] = useState<Product[]>([]);
+    // ── State (initialised from localStorage) ───────────────────────────────
+    const [expenses, setExpenses] = useState<Expense[]>(() => lsGet(LS_KEYS.expenses, []));
+    const [revenues, setRevenues] = useState<Revenue[]>(() => lsGet(LS_KEYS.revenues, []));
+    const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(() => lsGet(LS_KEYS.withdrawals, []));
+    const [campaigns, setCampaigns] = useState<Campaign[]>(() => lsGet(LS_KEYS.campaigns, []));
+    const [atendenteSales, setAtendenteSales] = useState<AtendenteSale[]>(() => lsGet(LS_KEYS.atendenteSales, []));
+    const [atendentes, setAtendentes] = useState<Atendente[]>(() => lsGet(LS_KEYS.atendentes, []));
+    const [products, setProducts] = useState<Product[]>(() => lsGet(LS_KEYS.products, []));
 
+    // ── Counters (mutable ref persisted to localStorage) ────────────────────
+    const counters = React.useRef(loadCounters());
+
+    const saveCounters = () => lsSet(LS_KEYS.counters, counters.current);
+
+    // ── Persist to localStorage on every change ──────────────────────────────
+    useEffect(() => { lsSet(LS_KEYS.expenses, expenses); }, [expenses]);
+    useEffect(() => { lsSet(LS_KEYS.revenues, revenues); }, [revenues]);
+    useEffect(() => { lsSet(LS_KEYS.withdrawals, withdrawals); }, [withdrawals]);
+    useEffect(() => { lsSet(LS_KEYS.campaigns, campaigns); }, [campaigns]);
+    useEffect(() => { lsSet(LS_KEYS.atendenteSales, atendenteSales); }, [atendenteSales]);
+    useEffect(() => { lsSet(LS_KEYS.atendentes, atendentes); }, [atendentes]);
+    useEffect(() => { lsSet(LS_KEYS.products, products); }, [products]);
+
+    // ── Expenses ─────────────────────────────────────────────────────────────
     const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
-        const id = pad(expenseCounter++, 'E');
+        const id = pad(counters.current.expense++, 'E');
+        saveCounters();
         setExpenses(prev => [{ ...e, id } as Expense, ...prev]);
     }, []);
 
@@ -233,8 +279,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setExpenses(prev => prev.filter(e => e.id !== id));
     }, []);
 
+    const clearExpenses = useCallback(() => { setExpenses([]); }, []);
+
+    // ── Revenues ─────────────────────────────────────────────────────────────
     const addRevenue = useCallback((r: Omit<Revenue, 'id'>) => {
-        const id = pad(revenueCounter++, 'R');
+        const id = pad(counters.current.revenue++, 'R');
+        saveCounters();
         setRevenues(prev => [{ ...r, id } as Revenue, ...prev]);
     }, []);
 
@@ -246,17 +296,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setRevenues(prev => prev.filter(r => r.id !== id));
     }, []);
 
+    const clearRevenues = useCallback(() => { setRevenues([]); }, []);
+
+    // ── Withdrawals ───────────────────────────────────────────────────────────
     const addWithdrawal = useCallback((w: Omit<Withdrawal, 'id'>) => {
-        const id = pad(withdrawalCounter++, 'S');
+        const id = pad(counters.current.withdrawal++, 'S');
+        saveCounters();
         setWithdrawals(prev => [{ ...w, id }, ...prev]);
+    }, []);
+
+    const updateWithdrawal = useCallback((id: string, patch: Partial<Withdrawal>) => {
+        setWithdrawals(prev => prev.map(w => w.id === id ? { ...w, ...patch } : w));
     }, []);
 
     const deleteWithdrawal = useCallback((id: string) => {
         setWithdrawals(prev => prev.filter(w => w.id !== id));
     }, []);
 
+    const clearWithdrawals = useCallback(() => { setWithdrawals([]); }, []);
+
+    // ── Campaigns ─────────────────────────────────────────────────────────────
     const addCampaign = useCallback((c: Omit<Campaign, 'id'>) => {
-        const id = pad(campaignCounter++, 'C');
+        const id = pad(counters.current.campaign++, 'C');
+        saveCounters();
         setCampaigns(prev => [{ ...c, id }, ...prev]);
     }, []);
 
@@ -268,8 +330,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCampaigns(prev => prev.filter(c => c.id !== id));
     }, []);
 
+    const clearCampaigns = useCallback(() => { setCampaigns([]); }, []);
+
+    // ── Products ──────────────────────────────────────────────────────────────
     const addProduct = useCallback((p: Omit<Product, 'id'>) => {
-        const id = pad(productCounter++, 'P');
+        const id = pad(counters.current.product++, 'P');
+        saveCounters();
         setProducts(prev => [{ ...p, id }, ...prev]);
     }, []);
 
@@ -281,8 +347,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setProducts(prev => prev.filter(p => p.id !== id));
     }, []);
 
+    const clearProducts = useCallback(() => { setProducts([]); }, []);
+
+    // ── Atendentes ────────────────────────────────────────────────────────────
     const addAtendente = useCallback((a: Omit<Atendente, 'id'>) => {
-        const id = `A${atendenteCounter++}`;
+        const id = `A${counters.current.atendente++}`;
+        saveCounters();
         setAtendentes(prev => [...prev, { ...a, id }]);
     }, []);
 
@@ -294,8 +364,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAtendentes(prev => prev.filter(a => a.id !== id));
     }, []);
 
+    // ── Atendente Sales ───────────────────────────────────────────────────────
     const addAtendenteSale = useCallback((s: Omit<AtendenteSale, 'id'>) => {
-        const id = pad(atendenteSaleCounter++, 'AT');
+        const id = pad(counters.current.atendenteSale++, 'AT');
+        saveCounters();
         setAtendenteSales(prev => [{ ...s, id }, ...prev]);
     }, []);
 
@@ -307,28 +379,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAtendenteSales(prev => prev.filter(s => s.id !== id));
     }, []);
 
-    const clearSeedData = useCallback(() => {
-        setExpenses(prev => prev.filter(e => !SEED_EXPENSE_IDS.has(e.id)));
-        setRevenues(prev => prev.filter(r => !SEED_REVENUE_IDS.has(r.id)));
-        setWithdrawals(prev => prev.filter(w => !SEED_WITHDRAWAL_IDS.has(w.id)));
-        setCampaigns(prev => prev.filter(c => !SEED_CAMPAIGN_IDS.has(c.id)));
-        setAtendenteSales(prev => prev.filter(s => !SEED_ATENDENTE_SALE_IDS.has(s.id)));
+    const clearAtendenteSales = useCallback(() => { setAtendenteSales([]); }, []);
+
+    // ── Global clear ──────────────────────────────────────────────────────────
+    const clearAll = useCallback(() => {
+        setExpenses([]);
+        setRevenues([]);
+        setWithdrawals([]);
+        setCampaigns([]);
+        setAtendenteSales([]);
+        setAtendentes([]);
+        setProducts([]);
+        const fresh = { expense: 1, revenue: 1, withdrawal: 1, campaign: 1, atendenteSale: 1, atendente: 1, product: 1 };
+        counters.current = fresh;
+        lsSet(LS_KEYS.counters, fresh);
     }, []);
 
+    // Legacy: clearSeedData (no-op now that seeds are empty — kept for settings page compat)
+    const clearSeedData = clearAll;
+
+    // ── KPIs ──────────────────────────────────────────────────────────────────
     const kpis = useMemo(() => {
         const totalExpenses = expenses
             .filter(e => e.status !== 'CANCELADO')
             .reduce((acc, e) => {
                 if (e.type === 'ad') return acc + e.amount;
                 if (e.type === 'product') return acc + e.quantity * e.unitCost;
-                return acc + e.amount;
+                return acc + (e as OtherExpense).amount;
             }, 0);
 
         const totalRevenue = revenues
             .filter(r => r.status !== 'CANCELADO')
             .reduce((acc, r) => {
                 if (r.type === 'product_sale') return acc + r.total;
-                return acc + r.amount;
+                return acc + (r as OtherRevenue).amount;
             }, 0);
 
         const totalWithdrawals = withdrawals
@@ -349,31 +433,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const activeCampaigns = campaigns.filter(c => c.status === 'ATIVA').length;
 
         return {
-            totalExpenses,
-            totalRevenue,
-            totalWithdrawals,
-            netProfit,
-            availableBalance,
-            totalAdSpend,
-            totalClicks,
-            totalOrders,
-            conversionRate,
-            roas,
-            activeCampaigns,
+            totalExpenses, totalRevenue, totalWithdrawals,
+            netProfit, availableBalance, totalAdSpend,
+            totalClicks, totalOrders, conversionRate, roas, activeCampaigns,
         };
     }, [expenses, revenues, withdrawals, campaigns]);
 
     return (
         <AppContext.Provider value={{
             expenses, revenues, withdrawals, campaigns, atendenteSales, atendentes, products,
-            addProduct, updateProduct, deleteProduct,
-            addExpense, updateExpense, deleteExpense,
-            addRevenue, updateRevenue, deleteRevenue,
-            addWithdrawal, deleteWithdrawal,
-            addCampaign, updateCampaign, deleteCampaign,
-            addAtendenteSale, updateAtendenteSale, deleteAtendenteSale,
+            addProduct, updateProduct, deleteProduct, clearProducts,
+            addExpense, updateExpense, deleteExpense, clearExpenses,
+            addRevenue, updateRevenue, deleteRevenue, clearRevenues,
+            addWithdrawal, updateWithdrawal, deleteWithdrawal, clearWithdrawals,
+            addCampaign, updateCampaign, deleteCampaign, clearCampaigns,
+            addAtendenteSale, updateAtendenteSale, deleteAtendenteSale, clearAtendenteSales,
             addAtendente, updateAtendente, deleteAtendente,
-            clearSeedData,
+            clearAll, clearSeedData,
             kpis,
         }}>
             {children}
